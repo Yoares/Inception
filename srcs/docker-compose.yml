@@ -1,0 +1,70 @@
+# version: '3'
+
+# services:
+#   # Service 1: MariaDB (The Database)
+#   mariadb:
+#     [cite_start]build: requirements/mariadb/  # Path to the Dockerfile [cite: 81]
+#     [cite_start]container_name: mariadb       # Must match service name [cite: 76]
+#     image: mariadb_image          # Custom image name
+#     networks:
+#       - [cite_start]inception                 # Connect to private network [cite: 92]
+#     volumes:
+#       - [cite_start]mariadb_vol:/var/lib/mysql # Persistent storage [cite: 88, 90]
+#     env_file:
+#       - [cite_start].env                      # Load secrets from .env file [cite: 117]
+#     [cite_start]restart: always               # Restart on crash [cite: 93]
+
+#   # Service 2: WordPress (The Application)
+#   wordpress:
+#     build: requirements/wordpress/
+#     container_name: wordpress
+#     image: wordpress_image
+#     depends_on:
+#       - mariadb                   # Wait for DB to start
+#     networks:
+#       - inception
+#     volumes:
+#       - [cite_start]wordpress_vol:/var/www/html # Website files [cite: 89]
+#     env_file:
+#       - .env
+#     restart: always
+
+#   # Service 3: NGINX (The Gatekeeper)
+#   nginx:
+#     build: requirements/nginx/
+#     container_name: nginx
+#     image: nginx_image
+#     depends_on:
+#       - wordpress                 # Wait for WP to start
+#     ports:
+#       - [cite_start]"443:443"                 # Only port 443 allowed [cite: 120]
+#     networks:
+#       - inception
+#     volumes:
+#       - wordpress_vol:/var/www/html # Needs access to WP files to serve them
+#     env_file:
+#       - .env
+#     restart: always
+
+# # Define the private network
+# networks:
+#   inception:
+#     driver: bridge
+
+# # Define the persistent volumes
+# volumes:
+#   mariadb_vol:
+#     driver: local
+#     driver_opts:
+#       type: none
+#       o: bind
+#       # ADJUST THIS PATH BELOW TO YOUR USERNAME
+#       [cite_start]device: /home/login/data/mariadb  [cite: 91]
+  
+#   wordpress_vol:
+#     driver: local
+#     driver_opts:
+#       type: none
+#       o: bind
+#       # ADJUST THIS PATH BELOW TO YOUR USERNAME
+#       [cite_start]device: /home/login/data/wordpress [cite: 91]
