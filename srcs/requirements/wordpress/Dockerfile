@@ -1,13 +1,19 @@
+# 1. Choose the operating system
 FROM debian:bullseye
 
-RUN apt-get update && apt-get install -y php7.4 php-fpm php-mysql mariadb-client curl
+# 2. Update the system and install PHP and tools
+RUN apt-get update -y && \
+    apt-get install -y php7.4-fpm php7.4-mysql curl tar
 
-COPY conf/www.conf /etc/php/7.4/fpm/pool.d/www.conf
-COPY tools/make_wordpress.sh /usr/local/bin/
+# 3. Create the folder where our website files will live
+RUN mkdir -p /var/www/html
 
-RUN chmod +x /usr/local/bin/make_wordpress.sh
-RUN mkdir -p /run/php
+# 4. Copy our setup script into the container
+COPY ./tools/setup.sh /usr/local/bin/setup.sh
+RUN chmod +x /usr/local/bin/setup.sh
 
-WORKDIR /var/www/wordpress
+# 5. Open the port for PHP-FPM
+EXPOSE 9000
 
-ENTRYPOINT ["/usr/local/bin/make_wordpress.sh"]
+# 6. Run the setup script
+CMD ["/usr/local/bin/setup.sh"]
