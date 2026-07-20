@@ -1,0 +1,19 @@
+Breaking Down the Syntax
+#!/bin/bash: This is called a "shebang." It must be the very first line. 
+It tells the operating system, "Use the bash interpreter to read and execute the rest of this file."
+
+if [ ! -d "..." ]; then:
+
+if ... then is standard conditional logic.
+
+-d checks if a specific directory exists.
+
+The ! means "NOT".
+
+Combined, it means: "If the directory /var/lib/mysql/YOUR_DB_NAME does not exist, then run the setup."
+
+mysql -e "...": The -e flag stands for "execute." 
+It allows you to pass a string of SQL directly into the MySQL engine without having to open the interactive MySQL prompt.
+
+exec mysqld_safe: As we discussed, this is the most critical line.
+exec terminates the current bash script and replaces it entirely with the mysqld_safe process, assigning it PID 1.
