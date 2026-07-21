@@ -1,32 +1,30 @@
-# Variables
-COMPOSE_FILE = ./srcs/docker-compose.yml
-DATA_PATH = /home/ykhoussi/data
+name = inception
 
-# Default rule to build and launch everything
-all:
-	@echo "Building and starting the Inception infrastructure..."
-	@mkdir -p $(DATA_PATH)/mariadb
-	@mkdir -p $(DATA_PATH)/wordpress
-	docker-compose -f $(COMPOSE_FILE) up -d --build
+# Variables for cleaner commands
+LOGIN	= ykhoussi
+DATA	= /home/$(LOGIN)/data
+COMPOSE	= docker-compose -f ./srcs/docker-compose.yml	
 
-# Stop the containers
+all: 
+	@echo "Building and starting containers..."
+	@sudo mkdir -p $(DATA)/mariadb
+	@sudo mkdir -p $(DATA)/wordpress
+	$(COMPOSE) up -d --build
+
 down:
-	@echo "Stopping the containers..."
-	docker-compose -f $(COMPOSE_FILE) down
+	@echo "Stopping containers..."
+	$(COMPOSE) down
 
-# Stop and completely remove containers, networks, and images
 clean: down
 	@echo "Cleaning up Docker environment..."
-	docker system prune -af
+	docker system prune -a -f
 
-# Deep clean: remove everything including the permanent volumes and their data
 fclean: clean
-	@echo "Performing deep clean and deleting volume data..."
+	@echo "Deep cleaning volumes and data..."
 	docker volume rm $$(docker volume ls -q) 2>/dev/null || true
-	sudo rm -rf $(DATA_PATH)/mariadb/*
-	sudo rm -rf $(DATA_PATH)/wordpress/*
+	sudo rm -rf $(DATA)/mariadb/*
+	sudo rm -rf $(DATA)/wordpress/*
 
-# Rebuild everything from scratch
 re: fclean all
 
 .PHONY: all down clean fclean re
