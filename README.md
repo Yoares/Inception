@@ -155,13 +155,399 @@ Confirms that the current user belongs to the `docker` group.
 
 ---
 
-## Setup Status
+# Inception Architecture
 
-* [x] Debian 13 VM
-* [x] Docker Repository Added
-* [x] Docker Engine Installed
-* [x] Docker Compose Installed
-* [x] Docker Service Running
-* [x] User Added to Docker Group
-* [ ] Docker Tested Without `sudo`
+The mandatory project is composed of three containers communicating through a custom Docker network.
+
+```text
+                Browser
+                    │
+               HTTPS (443)
+                    │
+                    ▼
+               +-----------+
+               |  NGINX    |
+               +-----------+
+                    │
+        FastCGI (Port 9000)
+                    │
+                    ▼
+               +-----------+
+               | PHP-FPM   |
+               |WordPress  |
+               +-----------+
+                    │
+          SQL (Port 3306)
+                    │
+                    ▼
+               +-----------+
+               | MariaDB   |
+               +-----------+
+```
+
+## Services
+
+| Service | Responsibility |
+|---------|----------------|
+| NGINX | Reverse proxy, HTTPS termination, serves static files, forwards PHP requests. |
+| PHP-FPM | Executes WordPress PHP scripts. |
+| MariaDB | Stores all persistent WordPress data. |
+
+---
+
+# Docker Compose Concepts
+
+## Services
+
+Each container is defined as a service:
+
+- nginx
+- wordpress
+- mariadb
+
+Each service has its own:
+- Filesystem
+- Process
+- Network namespace
+
+## Network
+
+```yaml
+networks:
+  inception:
+    driver: bridge
+```
+
+Docker automatically creates DNS records.
+
+Example:
+
+```text
+WordPress
+    │
+    ▼
+Host: mariadb
+```
+
+No IP address is required.
+
+## Volumes
+
+```text
+Host
+/home/<login>/data/mariadb
+          │
+          ▼
+Container
+/var/lib/mysql
+```
+
+Volumes persist data even after containers are removed.
+
+## Environment Variables
+
+Sensitive configuration comes from `.env`.
+
+Examples:
+
+- MYSQL_DATABASE
+- MYSQL_USER
+- MYSQL_PASSWORD
+- MYSQL_ROOT_PASSWORD
+- DOMAIN_NAME
+- WP_ADMIN_USER
+
+---
+
+# MariaDB
+
+MariaDB stores:
+
+- Users
+- Posts
+- Pages
+- Comments
+- Settings
+- Plugins configuration
+
+## Configuration
+
+```ini
+bind-address = 0.0.0.0
+```
+
+Allows other containers to connect.
+
+```ini
+datadir = /var/lib/mysql
+```
+
+Location of database files.
+
+## Startup Script
+
+On first start:
+
+1. Check if database exists.
+2. Start MariaDB temporarily.
+3. Create database.
+4. Create user.
+5. Grant privileges.
+6. Set root password.
+7. Stop temporary server.
+8. Start MariaDB in foreground.
+
+---
+
+# WordPress / PHP-FPM
+
+Packages installed:
+
+- php-fpm
+- php-mysql
+- curl
+- wget
+- WP-CLI
+
+## php-mysql
+
+`php-mysql` is the PHP extension that allows PHP to communicate with MariaDB.
+
+```text
+PHP
+ │
+ ▼
+php-mysql
+ │
+ ▼
+SQL Queries
+ │
+ ▼
+MariaDB
+```
+
+## WP-CLI
+
+- `wp core download` → Downloads WordPress.
+- `wp config create` → Creates `wp-config.php`.
+- `wp core install` → Creates database tables and admin account.
+- `wp user create` → Creates additional users.
+
+## PHP-FPM Configuration
+
+```ini
+listen = 9000
+```
+
+Allows NGINX to communicate over TCP.
+
+```ini
+pm = dynamic
+```
+
+Dynamic worker management.
+
+```ini
+pm.max_children = 5
+```
+
+Maximum PHP workers.
+
+```ini
+clear_env = no
+```
+
+Allows PHP to access Docker environment variables.
+
+## Initialization
+
+First startup:
+
+1. Create `/run/php`
+2. Download WordPress
+3. Wait for MariaDB
+4. Generate `wp-config.php`
+5. Install WordPress
+6. Create admin
+7. Create secondary user
+8. Start PHP-FPM
+
+---
+
+# WordPress Architecture
+
+```text
+/var/www/html
+│
+├── index.php
+├── wp-config.php
+├── wp-admin/
+├── wp-content/
+└── wp-includes/
+```
+
+## index.php
+
+Entry point of WordPress.
+
+## wp-config.php
+
+Stores:
+
+- Database credentials
+- Security keys
+- Table prefix
+- Debug configuration
+
+## wp-admin
+
+Administration dashboard.
+
+## wp-content
+
+Contains:
+
+- themes/
+- plugins/
+- uploads/
+
+## wp-includes
+
+Contains WordPress core libraries.
+
+---
+
+# WordPress Request Lifecycle
+
+```text
+Browser
+    │
+HTTP Request
+    │
+    ▼
+NGINX
+    │
+FastCGI
+    │
+    ▼
+PHP-FPM
+    │
+Execute WordPress
+    │
+SQL Queries
+    │
+    ▼
+MariaDB
+    │
+Return Data
+    │
+    ▼
+Generate HTML
+    │
+    ▼
+NGINX
+    │
+    ▼
+Browser
+```
+
+---
+
+# WordPress Database
+
+| Table | Purpose |
+|--------|---------|
+| wp_posts | Posts, pages, attachments, revisions |
+| wp_users | Users |
+| wp_options | Site settings |
+| wp_comments | Comments |
+| wp_terms | Categories & tags |
+| wp_postmeta | Post metadata |
+| wp_usermeta | User metadata |
+
+`wp_posts` stores multiple content types using the `post_type` column:
+
+- post
+- page
+- attachment
+- revision
+- custom post types
+
+---
+
+# WordPress Boot Process
+
+```text
+index.php
+    │
+    ▼
+wp-blog-header.php
+    │
+    ▼
+wp-load.php
+    │
+    ▼
+wp-config.php
+    │
+    ▼
+wp-settings.php
+    │
+    ▼
+Load Plugins
+    │
+    ▼
+Load Theme
+    │
+    ▼
+Connect to MariaDB
+    │
+    ▼
+Execute SQL Queries
+    │
+    ▼
+Generate HTML
+    │
+    ▼
+Browser
+```
+
+---
+
+# Current Progress
+
+## Docker
+
+- [x] Docker Engine
+- [x] Docker Compose
+- [x] Images
+- [x] Containers
+- [x] Networks
+- [x] Volumes
+
+## MariaDB
+
+- [x] Dockerfile
+- [x] Configuration
+- [x] Initialization Script
+- [x] Persistent Volume
+
+## WordPress
+
+- [x] PHP-FPM
+- [x] WP-CLI
+- [x] Automatic Installation
+- [x] Administrator Creation
+- [x] Secondary User Creation
+- [x] Custom PHP-FPM Configuration
+
+## Documentation
+
+- [x] Docker Setup
+- [x] Docker Compose
+- [x] MariaDB
+- [x] WordPress
+- [x] Request Lifecycle
+- [x] Database
+- [x] Boot Process
+
 
