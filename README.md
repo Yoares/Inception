@@ -551,3 +551,26 @@ Browser
 - [x] Boot Process
 
 
+# NGINX
+
+NGINX is the public-facing web server.
+
+- Accepts HTTPS on **443**.
+- Terminates SSL/TLS.
+- Serves static files.
+- Forwards PHP requests to PHP-FPM using FastCGI.
+
+## Why OpenSSL?
+
+OpenSSL is a cryptographic toolkit used to generate public/private keys, certificates, encrypt and decrypt data, create CSRs, and verify certificates.
+
+For the Inception project it is only used to generate a **self-signed TLS certificate** during the image build.
+
+It generates:
+
+| File | Purpose |
+|------|---------|
+| `inception.key` | Private key kept secret by NGINX. |
+| `inception.crt` | Public certificate sent to browsers during the TLS handshake. |
+
+Because the certificate is self-signed, browsers display a security warning, which is expected in this project.

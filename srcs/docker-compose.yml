@@ -26,6 +26,22 @@ services:
       - inception
     volumes:
       - wordpress_data:/var/www/html
+  
+  nginx:
+    build:
+      context: ./requirements/nginx
+      dockerfile: Dockerfile
+    container_name: nginx
+    restart: always
+    # Map port 443 on your VM host to port 443 inside the NGINX container
+    ports:
+      - "443:443"
+    networks:
+      - inception
+    # Mount the exact same volume that WordPress is using
+    volumes:
+      - wordpress_data:/var/www/html
+
 networks:
   inception:
     driver: bridge
