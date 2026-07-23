@@ -1,6 +1,7 @@
 # 🐳 Inception Setup & Evaluation Guide
 
-> **This project has been created as part of the 42 curriculum (1337 School).**  
+*This project has been created as part of the 42 curriculum by ykhoussi.*[cite: 2]
+
 > The goal of this project is to broaden your knowledge of system administration by using Docker. You will virtualize several Docker images, creating them in your new personal virtual machine.
 
 ---
@@ -15,9 +16,11 @@
    - [NGINX](#1-nginx)
    - [WordPress & PHP-FPM](#2-wordpress--php-fpm)
    - [MariaDB](#3-mariadb)
+   - [Redis Cache (Bonus)](#4-redis-cache-bonus)
 7. [Request Lifecycle & Boot Process](#request-lifecycle--boot-process)
 8. [Usage (Makefile)](#usage)
-9. [Current Progress](#current-progress)
+9. [Diagnostics & Verification](#diagnostics--verification)
+10. [Current Progress](#current-progress)
 
 ---
 
@@ -78,7 +81,7 @@ docker compose version
 
 ## 🏗️ Project Architecture
 
-The mandatory project is composed of three containers communicating through a custom internal Docker network (`inception`).
+The project is composed of multiple containers communicating strictly through a custom internal Docker network (`inception`).
 
 ```text
                 Browser
@@ -93,10 +96,10 @@ The mandatory project is composed of three containers communicating through a cu
        FastCGI (Port 9000)
                    │
                    ▼
-              +-----------+
-              | PHP-FPM   |
-              | WordPress |
-              +-----------+
+              +-----------+        TCP (Port 6379)
+              | PHP-FPM   | ─────────────────────▶ +-----------+
+              | WordPress |                        |   Redis   |
+              +-----------+ ◀───────────────────── +-----------+
                    │
          SQL (Port 3306)
                    │
@@ -111,6 +114,7 @@ The mandatory project is composed of three containers communicating through a cu
 | **NGINX** | Reverse proxy, HTTPS termination, serves static files, forwards PHP requests. |
 | **PHP-FPM** | Executes WordPress PHP scripts. |
 | **MariaDB** | Stores all persistent WordPress data. |
+| **Redis** | In-memory object caching to reduce database load. |
 
 ---
 
@@ -149,6 +153,7 @@ This map outlines the conceptual dependencies required to master and defend the 
 * **PHP-FPM / WordPress** (Logic Execution, WP-CLI, wp-config.php)
   * ↳ *SQL Queries (Over internal Docker network)*
 * **MariaDB** (Relational Data, Privileges, Isolated Port 3306)
+* **Redis** (In-memory Object Cache, RESP Protocol, Port 6379)
 
 ---
 
@@ -211,32 +216,34 @@ The relational database storing Users, Posts, Pages, Comments, and Settings.
 **Startup Sequence:**
 Checks if the DB exists ➔ Starts MariaDB temporarily ➔ Creates DB & Users ➔ Grants privileges ➔ Sets Root password ➔ Stops temporary server ➔ Restarts MariaDB in the foreground (PID 1).
 
+### 4. Redis Cache (Bonus)
+An in-memory data structure store used to cache database query results, dramatically reducing load times.[cite: 2]
+* **`bind 0.0.0.0`**: Listens on all internal Docker network interfaces.
+* **LRU Eviction**: Configured to drop the least recently used keys when memory limits are reached.
+* **Integration**: Intercepts requests via a custom `object-cache.php` drop-in managed by WP-CLI.
+
 ---
 
 ## 🔄 Request Lifecycle & Boot Process
 
-### The HTTP Request Flow
+### The HTTP Request Flow (With Cache)
 ```text
-Browser ➔ HTTPS Request ➔ NGINX ➔ FastCGI (9000) ➔ PHP-FPM ➔ SQL Queries (3306) ➔ MariaDB
-MariaDB ➔ Data Return ➔ PHP-FPM ➔ Generates HTML ➔ NGINX ➔ Browser
+Browser ➔ HTTPS Request ➔ NGINX ➔ FastCGI (9000) ➔ PHP-FPM ➔ Checks Redis Cache
+      IF CACHE MISS: ➔ SQL Queries (3306) ➔ MariaDB ➔ Store in Redis ➔ Render HTML ➔ NGINX ➔ Browser
+      IF CACHE HIT:  ➔ Render HTML ➔ NGINX ➔ Browser (Skips MariaDB entirely)
 ```
 
 ### The WordPress Boot Process
 ```text
 index.php ➔ wp-blog-header.php ➔ wp-load.php ➔ wp-config.php ➔ wp-settings.php 
-➔ Load Plugins ➔ Load Theme ➔ Connect to MariaDB ➔ Execute Queries ➔ Render HTML
+➔ Load Plugins ➔ Load Theme ➔ Connect to MariaDB/Redis ➔ Execute Logic ➔ Render HTML
 ```
-
-### The Database Structure
-* `wp_posts`: Posts, pages, attachments.
-* `wp_users` / `wp_usermeta`: User accounts and metadata.
-* `wp_options`: Core site settings.
 
 ---
 
 ## 🚀 Usage
 
-The project is managed entirely via the `Makefile` located at the root of the repository.
+The project is managed entirely via the `Makefile` located at the root of the repository. *Note: All docker-compose commands have been migrated to the modern Compose V2 (`docker compose`).*
 
 | Command | Action |
 |---------|--------|
@@ -248,10 +255,35 @@ The project is managed entirely via the `Makefile` located at the root of the re
 
 ---
 
+## 🔍 Diagnostics & Verification
+
+Use these essential commands to verify the integrity and performance of the architecture during evaluations.
+
+### 1. Redis Cache Metrics (Application Level)
+To verify that WordPress is successfully communicating with Redis and to check the cache hit rate:
+```bash
+# Enter the WordPress container
+docker exec -it wordpress bash
+cd /var/www/html
+
+# Check active connection status and drop-in validity
+wp redis status --allow-root
+
+```
+
+### 2. Redis Socket Monitoring (Low Level)
+To observe live TCP query interception in real-time while browsing the website:
+```bash
+# Attach directly to the Redis daemon's live output stream
+docker exec -it redis redis-cli monitor
+```
+
+---
+
 ## ✅ Current Progress
 
 ### Docker Infrastructure
-- [x] Docker Engine & Compose installation
+- [x] Docker Engine & Compose V2 installation
 - [x] Custom Bridge Network
 - [x] Host Bind Mount Volumes
 
@@ -272,6 +304,13 @@ The project is managed entirely via the `Makefile` located at the root of the re
 - [x] SSL/TLS generation via OpenSSL
 - [x] Port 443 Restriction
 - [x] Reverse Proxy routing to FastCGI
+
+### Bonus Services
+- [x] **Redis Cache:** Dedicated container, network binding, memory management, and `wp-cli` object cache drop-in integration.[cite: 2]
+- [ ] FTP Server
+- [ ] Static Website
+- [ ] Adminer
+- [ ] Custom Service
 
 ### Documentation & Defense
 - [x] Docker Setup & Fundamentals
