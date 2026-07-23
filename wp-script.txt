@@ -1,0 +1,19 @@
+# WordPress Initialization Script (`setup.sh`)
+
+This script runs every time the WordPress container starts.
+
+* Creates the `/run/php` directory required by PHP-FPM.
+* Moves to the WordPress installation directory (`/var/www/html`).
+* Checks whether `wp-config.php` exists.
+
+  * If it **doesn't exist** (first startup):
+
+    * Downloads the WordPress core files.
+    * Waits for the MariaDB service to be ready.
+    * Creates `wp-config.php` using the database credentials from the environment variables.
+    * Installs WordPress and creates the administrator account.
+    * Creates a secondary user with the `author` role.
+  * If it **exists**, the installation is skipped to avoid reinstalling WordPress.
+* Starts PHP-FPM in the foreground (`php-fpm7.4 -F`), making it the container's main process so the container stays running.
+
+**Summary:** The script automates the initial WordPress installation on the first container startup and launches PHP-FPM to handle PHP requests on every startup.
