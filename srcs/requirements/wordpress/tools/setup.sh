@@ -45,6 +45,20 @@ if [ ! -f "wp-config.php" ]; then
                    --user_pass="${WP_USER_PASSWORD}" \
                    --allow-root
 
+    # --- START OF REDIS INTEGRATION ---
+    echo "Configuring Redis cache..."
+    
+    # 1. Tell WordPress where to find the Redis server
+    wp config set WP_REDIS_HOST redis --allow-root
+    wp config set WP_REDIS_PORT 6379 --raw --allow-root
+    
+    # 2. Download and activate the plugin
+    wp plugin install redis-cache --activate --allow-root
+    
+    # 3. Deploy the object-cache.php drop-in to wp-content
+    wp redis enable --allow-root
+    # --- END OF REDIS INTEGRATION ---
+    
     echo "WordPress installation complete!"
 else
     echo "WordPress is already installed. Skipping initialization."
