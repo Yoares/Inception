@@ -1,4 +1,3 @@
-version: '3'
 
 services:
   mariadb:
@@ -58,6 +57,12 @@ services:
       - inception
     volumes:
       - wordpress_data:/var/www/html
+  static_site:
+    build: ./requirements/bonus/static_site
+    container_name: static_site
+    networks:
+      - inception
+    restart: always
 
 networks:
   inception:

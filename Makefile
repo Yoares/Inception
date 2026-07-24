@@ -4,7 +4,7 @@ NAME = inception
 LOGIN   = ykhoussi
 DATA    = /home/$(LOGIN)/data
 # FIX 1: Migrated from V1 (docker-compose) to V2 (docker compose)
-COMPOSE = docker-compose -f ./srcs/docker-compose.yml   
+COMPOSE = docker compose -f ./srcs/docker-compose.yml   
 
 all: 
 	@echo "Building and starting containers..."
