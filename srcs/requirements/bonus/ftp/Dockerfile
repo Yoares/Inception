@@ -1,7 +1,7 @@
 FROM debian:bullseye
 
 # Install the Very Secure FTP Daemon
-RUN apt-update && apt-get install -y vsftpd
+RUN apt update && apt-get install -y vsftpd
 
 # Create the empty directory required by vsftpd for secure chrooting
 RUN mkdir -p /var/run/vsftpd/empty
