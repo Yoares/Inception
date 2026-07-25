@@ -63,6 +63,27 @@ services:
     networks:
       - inception
     restart: always
+  
+  adminer:
+    build: ./requirements/bonus/adminer
+    container_name: adminer
+    depends_on:
+      - mariadb
+    networks:
+      - inception
+    restart: always
+
+  cadvisor:
+    build: ./requirements/bonus/cadvisor
+    container_name: cadvisor
+    networks:
+      - inception
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      - /var/lib/docker/:/var/lib/docker:ro
+    restart: always
 
 networks:
   inception:
