@@ -10,11 +10,13 @@ if ! id -u "$FTP_USER" > /dev/null 2>&1; then
     # Assign the password securely
     echo "$FTP_USER:$FTP_PASSWORD" | chpasswd
     
-    # Add the FTP user to the www-data group so PHP can interact with uploaded files
+    # Add the FTP user to the www-data group
     usermod -aG www-data "$FTP_USER"
     
-    # Ensure ownership is correct so the FTP user can actually write to the directory
-    chown -R "$FTP_USER":www-data /var/www/html
+    # DO NOT steal ownership from WordPress. 
+    # Keep www-data as the owner, but ensure the group has write permissions (775)
+    chown -R www-data:www-data /var/www/html
+    chmod -R 775 /var/www/html
     
     echo "FTP user created and directory linked."
 else
