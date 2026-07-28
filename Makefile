@@ -26,8 +26,8 @@ clean: down
 fclean: clean
 	@echo "Deep cleaning volumes and data..."
 	docker volume rm $$(docker volume ls -q) 2>/dev/null || true
-	sudo rm -rf $(DATA)/mariadb/*
-	sudo rm -rf $(DATA)/wordpress/*
+	sudo rm -rf $(DATA)/mariadb/
+	sudo rm -rf $(DATA)/wordpress/
 	
 re: fclean all
 
