@@ -7,6 +7,9 @@ services:
     restart: always
     env_file:
       - .env
+    secrets:
+      - db_password
+      - db_root_password
     networks:
       - inception
     volumes:
@@ -19,6 +22,8 @@ services:
     restart: always
     env_file:
       - .env
+    secrets:
+      - db_password
     networks:
       - inception
     volumes:
@@ -102,3 +107,9 @@ volumes:
       o: bind
       device: /home/ykhoussi/data/wordpress
 
+# --- Secrets Definition ---
+secrets:
+  db_password:
+    file: ./secrets/db_password.txt
+  db_root_password:
+    file: ./secrets/db_root_password.txt
